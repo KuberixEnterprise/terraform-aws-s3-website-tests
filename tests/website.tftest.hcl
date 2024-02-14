@@ -8,7 +8,7 @@ run "setup_tests" {
 # Apply run block to create the bucket
 run "create_bucket" {
   variables {
-    bucket_name = "${run.setup_tests.bucket_prefix}-aws-s3-website-test"
+    bucket_name = "${run.setup_tests.bucket_prefix}-aws-s3-website-test" # random 한 버킷 이름 생성됨.
   }
 
   # Check that the bucket name is correct
@@ -31,7 +31,7 @@ run "create_bucket" {
 }
 
 run "website_is_running" {
-  command = plan
+  command = apply
 
   module {
     source = "./tests/final"
@@ -44,6 +44,26 @@ run "website_is_running" {
   assert {
     condition     = data.http.index.status_code == 200
     error_message = "Website responded with HTTP status ${data.http.index.status_code}"
+  }
+}
+
+override_resource {
+  target = aws_instance.backend_api
+}
+
+override_resource {
+  target = aws_db_instance.backend_api
+}
+
+run "check_backend_api" {
+  assert {
+    condition     = aws_instance.backend_api.tags.Name == "backend"
+    error_message = "Invalid name tag"
+  }
+
+  assert {
+    condition     = aws_db_instance.backend_api.username == "foo"
+    error_message = "Invalid database username"
   }
 }
 
